@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/logrusorgru/aurora"
 	"io/ioutil"
 	"log"
 	"os"
@@ -22,10 +21,7 @@ type FileWithLine struct {
 var wg sync.WaitGroup
 
 var mySet = map[string]FileWithLine{}
-var rgx = regexp.MustCompile("\\s+ErrId\\s*:\\s*\"(?P<uuid>[0-9a-z-]{30,38})\"")
-var rgx1 = regexp.MustCompile(".*\"cm:(?P<uuid>[0-9a-z-]{30,66})\"")
-var rgx2 = regexp.MustCompile(".*\"cm:(?P<uuid>[0-9a-z-]{30,66}):\"")
-var rgx3 = regexp.MustCompile(".*\"(?P<uuid>[0-9a-z-]{30,66}):\"")
+var rgx4 = regexp.MustCompile(`[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}`)
 var mtx = sync.RWMutex{}
 
 // ErrId XXX: "0a69f97b-b273-4d70-8061-f5eb85277d15",
@@ -43,31 +39,15 @@ func traverseDir(d string) {
 
 	bn := filepath.Base(d)
 
-	if bn == ".git" {
-		return
-	}
-
-	if bn == "tmp" {
-		return
-	}
-
-	if bn == "temp" {
-		return
-	}
-
-	if bn == ".github" {
-		return
-	}
-
-	if bn == ".idea" {
-		return
-	}
-
-	if bn == "node_modules" {
-		return
-	}
-
-	if bn == ".vscode" {
+	switch bn {
+	case ".git",
+		"tmp",
+		"temp",
+		".github",
+		".idea",
+		"pkg",
+		"node_modules",
+		".vscode":
 		return
 	}
 
@@ -92,116 +72,74 @@ func traverseDir(d string) {
 				continue
 			}
 
-			file, err := os.Open(fullPath)
+			func(fullPath string) {
 
-			defer file.Close()
+				file, err := os.Open(fullPath)
 
-			if err != nil {
-				log.Fatalf("failed opening file: %s", err)
-			}
+				defer file.Close()
 
-			scanner := bufio.NewScanner(file)
-			scanner.Split(bufio.ScanLines)
-
-			i := 0
-			for scanner.Scan() {
-				i++
-				var line = scanner.Text()
-
-				var doThing = func(theUuid string) {
-
-					//s := strings.Split(line, "\"")
-					//theUuid := s[len(s)-2]
-
-					//fmt.Println("the uuid before:", theUuid)
-
-					if strings.HasPrefix(theUuid, "cm:") {
-						theUuid = theUuid[3:]
-					}
-
-					if strings.HasSuffix(theUuid, ":") {
-						theUuid = theUuid[:len(theUuid)-1]
-					}
-
-					//fmt.Println("the uuid:", theUuid)
-					mtx.RLock()
-					v, ok := mySet[theUuid]
-					mtx.RUnlock()
-
-					if ok {
-						fmt.Println("the set already has this uuid:", theUuid, "at: ", fmt.Sprintf("%s:%v", v.Path, v.Line))
-						fmt.Println("the current dupe is located at:", fmt.Sprintf("%s:%v", fullPath, i))
-						fmt.Println("new uuid 1:", strings.ToLower(uuid.New().String()))
-						fmt.Println("new uuid 2:", strings.ToLower(uuid.New().String()))
-						fmt.Println("new uuid 3:", strings.ToLower(uuid.New().String()))
-						log.Fatal("We found a dupe.")
-					} else {
-						mtx.Lock()
-						mySet[theUuid] = FileWithLine{Line: i, Path: fullPath}
-						mtx.Unlock()
-					}
+				if err != nil {
+					log.Fatalf("failed opening file: %s", err)
 				}
 
-				if rgx.MatchString(line) {
-					//fmt.Println("line matches:", line)
-					captured := rgx.FindStringSubmatch(line)
-					if len(captured) > 1 {
-						//fmt.Println("capture group:", captured)
+				scanner := bufio.NewScanner(file)
+				scanner.Split(bufio.ScanLines)
+
+				i := 0
+				for scanner.Scan() {
+					i++
+					var line = scanner.Text()
+
+					var doThing = func(theUuid string) {
+
+						//s := strings.Split(line, "\"")
+						//theUuid := s[len(s)-2]
+
+						//fmt.Println("the uuid before:", theUuid)
+
+						if strings.HasPrefix(theUuid, "cm:") {
+							theUuid = theUuid[3:]
+						}
+
+						if strings.HasSuffix(theUuid, ":") {
+							theUuid = theUuid[:len(theUuid)-1]
+						}
+
+						//fmt.Println("the uuid:", theUuid)
+						mtx.RLock()
+						v, ok := mySet[theUuid]
+						mtx.RUnlock()
+
+						if ok {
+							fmt.Println("the set already has this uuid:", theUuid, "at: ", fmt.Sprintf("%s:%v", v.Path, v.Line))
+							fmt.Println("the current dupe is located at:", fmt.Sprintf("%s:%v", fullPath, i))
+							fmt.Println("new uuid 1:", strings.ToLower(uuid.New().String()))
+							fmt.Println("new uuid 2:", strings.ToLower(uuid.New().String()))
+							fmt.Println("new uuid 3:", strings.ToLower(uuid.New().String()))
+							log.Fatal("We found a dupe.")
+						} else {
+							mtx.Lock()
+							mySet[theUuid] = FileWithLine{Line: i, Path: fullPath}
+							mtx.Unlock()
+						}
 					}
 
-					if len(captured) > 1 && captured[1] != "" {
-						doThing(captured[1])
-					} else {
-						fmt.Println(aurora.Red("capture group did not have expected length:"), captured)
-					}
-					continue
-				}
-
-				if rgx1.MatchString(line) {
-					captured := rgx1.FindStringSubmatch(line)
+					captured := rgx4.FindStringSubmatch(line)
 
 					if len(captured) > 1 {
 						//fmt.Println("capture group:", captured)
+						log.Fatal("strange capture length greater than 1")
 					}
 
-					if len(captured) > 1 && captured[1] != "" {
-						doThing(captured[1])
-					} else {
-						fmt.Println(aurora.Red("capture group did not have expected length:"), captured)
+					if len(captured) < 1 {
+						continue
 					}
-					continue
+
+					var cap = captured[0]
+					doThing(cap)
+
 				}
-
-				if rgx2.MatchString(line) {
-					captured := rgx2.FindStringSubmatch(line)
-					if len(captured) > 1 {
-						//fmt.Println("capture group:", captured)
-					}
-
-					if len(captured) > 1 && captured[1] != "" {
-						doThing(captured[1])
-					} else {
-						fmt.Println(aurora.Red("capture group did not have expected length:"), captured)
-					}
-					continue
-				}
-
-				if rgx3.MatchString(line) {
-					captured := rgx3.FindStringSubmatch(line)
-
-					if len(captured) > 1 {
-						//fmt.Println("capture group:", captured)
-					}
-					if len(captured) > 1 && captured[1] != "" {
-						doThing(captured[1])
-					} else {
-						fmt.Println(aurora.Red("capture group did not have expected length:"), captured)
-					}
-					continue
-				}
-
-			}
-
+			}(fullPath)
 		}
 
 	}()
@@ -215,6 +153,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("traversing root dir:", dir)
 	traverseDir(dir)
 	fmt.Println("Main: Waiting for workers to finish")
 	wg.Wait()
