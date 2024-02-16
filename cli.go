@@ -111,6 +111,11 @@ func traverseDir(d string) {
 
 					var doThing = func(theUuid string) {
 
+						if strings.HasPrefix(theUuid, "zz") {
+							fmt.Println("[err-id-checker] skipping uuid with 'zz' in front")
+							return
+						}
+
 						if strings.HasPrefix(theUuid, "cm:") {
 							theUuid = theUuid[3:]
 						}
