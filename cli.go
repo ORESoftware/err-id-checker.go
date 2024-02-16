@@ -68,7 +68,21 @@ func traverseDir(d string) {
 			// fmt.Println("we see file:", fullPath)
 
 			if f.IsDir() {
+				if strings.HasSuffix(fullPath, "/logs") {
+					fmt.Println("[err-id-checker] skipping /logs path:", fullPath)
+					continue
+				}
 				traverseDir(fullPath)
+				continue
+			}
+
+			if strings.HasSuffix(fullPath, ".md") {
+				fmt.Println("[err-id-checker] skipping .md file:", fullPath)
+				continue
+			}
+
+			if strings.HasSuffix(fullPath, ".log") {
+				fmt.Println("[err-id-checker] skipping .log file:", fullPath)
 				continue
 			}
 
