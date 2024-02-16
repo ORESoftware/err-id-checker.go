@@ -21,7 +21,7 @@ type FileWithLine struct {
 var wg sync.WaitGroup
 
 var mySet = map[string]FileWithLine{}
-var rgx4 = regexp.MustCompile(`[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}`)
+var rgx = regexp.MustCompile(`[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}`)
 var mtx = sync.RWMutex{}
 
 // ErrId XXX: "0a69f97b-b273-4d70-8061-f5eb85277d15",
@@ -35,7 +35,7 @@ var mtx = sync.RWMutex{}
 
 func traverseDir(d string) {
 
-	//fmt.Println("traversing dir:", d)
+	// fmt.Println("traversing dir:", d)
 
 	bn := filepath.Base(d)
 
@@ -59,13 +59,13 @@ func traverseDir(d string) {
 		files, err := ioutil.ReadDir(d)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("7819ea77-24ea-4c24-b11f-6d968e606bf5", err)
 		}
 
 		for _, f := range files {
 
 			fullPath := filepath.Join(d, f.Name())
-			//fmt.Println("we see file:", fullPath)
+			// fmt.Println("we see file:", fullPath)
 
 			if f.IsDir() {
 				traverseDir(fullPath)
@@ -76,11 +76,16 @@ func traverseDir(d string) {
 
 				file, err := os.Open(fullPath)
 
-				defer file.Close()
-
 				if err != nil {
-					log.Fatalf("failed opening file: %s", err)
+					log.Println(fmt.Sprintf("failed opening file: %v", err))
+					return
 				}
+
+				defer func() {
+					if err := file.Close(); err != nil {
+						log.Println("12ee3ee5-1232-4ac0-9294-a376b764f9e0", err)
+					}
+				}()
 
 				scanner := bufio.NewScanner(file)
 				scanner.Split(bufio.ScanLines)
@@ -92,11 +97,6 @@ func traverseDir(d string) {
 
 					var doThing = func(theUuid string) {
 
-						//s := strings.Split(line, "\"")
-						//theUuid := s[len(s)-2]
-
-						//fmt.Println("the uuid before:", theUuid)
-
 						if strings.HasPrefix(theUuid, "cm:") {
 							theUuid = theUuid[3:]
 						}
@@ -105,7 +105,6 @@ func traverseDir(d string) {
 							theUuid = theUuid[:len(theUuid)-1]
 						}
 
-						//fmt.Println("the uuid:", theUuid)
 						mtx.RLock()
 						v, ok := mySet[theUuid]
 						mtx.RUnlock()
@@ -124,11 +123,11 @@ func traverseDir(d string) {
 						}
 					}
 
-					captured := rgx4.FindStringSubmatch(line)
+					captured := rgx.FindStringSubmatch(line)
 
 					if len(captured) > 1 {
-						//fmt.Println("capture group:", captured)
-						log.Fatal("strange capture length greater than 1")
+						// fmt.Println("capture group:", captured)
+						log.Fatal("4a4f221e-3c48-4049-b8c6-1115c905ebb8:", "strange capture length greater than 1")
 					}
 
 					if len(captured) < 1 {
