@@ -21,7 +21,19 @@ type FileWithLine struct {
 var wg sync.WaitGroup
 
 var mySet = map[string]FileWithLine{}
-var rgx = regexp.MustCompile(`[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}`)
+var rgx1 = regexp.MustCompile(`[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}`)
+var rgx2 = regexp.MustCompile(`vid/[a-f0-9]{12}`)
+
+var rgx *regexp.Regexp
+
+func init() {
+	if os.Getenv("use_vid") == "1" || os.Getenv("use_vid") == "true" {
+		rgx = rgx2
+	} else {
+		rgx = rgx1
+	}
+}
+
 var mtx = sync.RWMutex{}
 
 // ErrId XXX: "0a69f97b-b273-4d70-8061-f5eb85277d15",
@@ -56,7 +68,7 @@ func traverseDir(d string) {
 
 		defer wg.Done()
 
-		files, err := ioutil.ReadDir(d)
+		files, err := ioutil.ReadDir(d) // os.ReadDir() instead...
 
 		if err != nil {
 			log.Fatal("7819ea77-24ea-4c24-b11f-6d968e606bf5", err)
@@ -133,7 +145,8 @@ func traverseDir(d string) {
 							fmt.Println("the current dupe is located at:", fmt.Sprintf("%s:%v", fullPath, i))
 							fmt.Println("new uuid 1:", strings.ToLower(uuid.New().String()))
 							fmt.Println("new uuid 2:", strings.ToLower(uuid.New().String()))
-							fmt.Println("new uuid 3:", strings.ToLower(uuid.New().String()))
+							fmt.Println("new uuid 3:", strings.ToLower("vid/"+(uuid.New().String()[24:36])))
+							fmt.Println("new uuid 4:", strings.ToLower("vid/"+(uuid.New().String()[24:36])))
 							log.Fatal("We found a dupe.")
 						} else {
 							mtx.Lock()
