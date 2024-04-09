@@ -18,7 +18,7 @@ type FileWithLine struct {
 	Path string
 }
 
-var wg sync.WaitGroup
+var wg = sync.WaitGroup{}
 
 var mySet = map[string]FileWithLine{}
 var rgx1 = regexp.MustCompile(`[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}`)
@@ -44,6 +44,12 @@ var mtx = sync.RWMutex{}
 
 // "333333-b273-4d70-8061-f5eb85277d15:",
 // "333333-b273-4d70-8061-f5eb85277d15:",
+
+// "vid/f5eb85277d15",
+// "vid/f5eb85277d15",
+
+// "vid/f5eb85277d15:",
+// "vid/f5eb85277d15:",
 
 func traverseDir(d string) {
 
@@ -159,15 +165,15 @@ func traverseDir(d string) {
 
 					if len(captured) > 1 {
 						// fmt.Println("capture group:", captured)
-						log.Fatal("4a4f221e-3c48-4049-b8c6-1115c905ebb8:", "strange capture length greater than 1")
+						log.Fatal("eid/1115c905ebb8:", "strange capture length greater than 1")
 					}
 
 					if len(captured) < 1 {
 						continue
 					}
 
-					var cap = captured[0]
-					doThing(cap)
+					var cap0 = captured[0]
+					doThing(cap0)
 
 				}
 			}(fullPath)
@@ -179,9 +185,67 @@ func traverseDir(d string) {
 
 func main() {
 
-	dir, err := os.Getwd()
+	var dir = ""
+	var next = false
+	var lastValue = ""
+
+	var args = os.Args
+
+	if len(args) > 1 {
+		lastValue = args[len(args)-1]
+	}
+
+	for _, s := range os.Args {
+		if next {
+			dir = s
+			break
+		}
+		if s == "-d" {
+			next = true
+		}
+		if s == "--dir" {
+			next = true
+		}
+		if strings.HasPrefix(s, "--dir=") {
+			dir = strings.Join(strings.Split(s, "=")[1:], "")
+			break
+		}
+	}
+
+	if dir == "" {
+		dir = lastValue
+		if dir == "" {
+			fmt.Println("b4d000c6-63a4-400b-a5a6-b87d53a06056", "please provide a value for --dir, or -d, or --dir=x")
+			os.Exit(1)
+		}
+	}
+
+	pwd, err := os.Getwd()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("71c1589a-7384-4203-b575-63de85f7234c", err)
+	}
+
+	if strings.HasPrefix(dir, "--dir=") {
+		dir = strings.Join(strings.Split(dir, "=")[1:], "")
+	}
+
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(pwd, "/", dir)
+	}
+
+	fmt.Println("the dir we are searching:", dir)
+
+	if v, err := os.Stat(dir); true {
+		if err != nil {
+			fmt.Println("7be3285a-31b4-461d-b01c-721d7637e0ca", err)
+			fmt.Println("Could not find directory specified by last/final arg or --dir")
+			os.Exit(1)
+		}
+		if !v.IsDir() {
+			fmt.Println("49d6eb7e-4e70-4eac-a4bf-738bbf1ec167", "not configured to search one file")
+			fmt.Println("Please pass a directory, not a file, as argument to --dir, or as last/final argument in the command list.")
+			os.Exit(1)
+		}
 	}
 
 	fmt.Println("traversing root dir:", dir)
